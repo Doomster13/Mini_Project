@@ -1,6 +1,7 @@
 import os
 import time
 import uuid
+import json
 import torch
 import librosa
 import whisper
@@ -26,7 +27,6 @@ def isolate_audio(input_file):
     sources = apply_model(model, wav[None], device='cpu')[0]
     vocals = sources[3]
 
-    # Unique filename (UUID + timestamp for safety)
     unique_id = uuid.uuid4().hex
     timestamp = int(time.time())
     output_path = os.path.join(OUTPUT_DIR, f"clean_voice_{timestamp}_{unique_id}.wav")
@@ -60,17 +60,33 @@ def detect_emotion(audio_file):
     predicted_id = torch.argmax(logits, dim=-1).item()
     return model.config.id2label[predicted_id]
 
+# ------------------ STEP 4: Save JSON Output ------------------
+def save_result_json(result):
+    unique_id = uuid.uuid4().hex
+    timestamp = int(time.time())
+    json_path = os.path.join(OUTPUT_DIR, f"result_{timestamp}_{unique_id}.json")
+
+    with open(json_path, "w") as f:
+        json.dump(result, f, indent=4)
+
+    return json_path
+
 # ------------------ MAIN PIPELINE ------------------
 def run_pipeline(input_file):
     clean_audio = isolate_audio(input_file)
     text = transcribe_audio(clean_audio)
     emotion = detect_emotion(clean_audio)
 
-    return {
+    result = {
         "text": text,
         "emotion": emotion,
         "audio": clean_audio
     }
+
+    json_file = save_result_json(result)
+    result["json_file"] = json_file
+
+    return result
 
 # ------------------ RUN ------------------
 if __name__ == "__main__":
