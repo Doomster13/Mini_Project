@@ -1,4 +1,6 @@
 import os
+import time
+import uuid
 import torch
 import librosa
 import whisper
@@ -6,6 +8,10 @@ import torchaudio
 from transformers import AutoFeatureExtractor, AutoModelForAudioClassification
 from demucs.pretrained import get_model
 from demucs.apply import apply_model
+
+# ------------------ CONFIG ------------------
+OUTPUT_DIR = "outputs"
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # ------------------ STEP 1: Speech Isolation ------------------
 def isolate_audio(input_file):
@@ -20,7 +26,11 @@ def isolate_audio(input_file):
     sources = apply_model(model, wav[None], device='cpu')[0]
     vocals = sources[3]
 
-    output_path = "clean_voice.wav"
+    # Unique filename (UUID + timestamp for safety)
+    unique_id = uuid.uuid4().hex
+    timestamp = int(time.time())
+    output_path = os.path.join(OUTPUT_DIR, f"clean_voice_{timestamp}_{unique_id}.wav")
+
     torchaudio.save(output_path, vocals, sr)
 
     return output_path
